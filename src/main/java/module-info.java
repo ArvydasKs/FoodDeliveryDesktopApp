@@ -1,7 +1,7 @@
 module com.example.courseprifs {
     requires javafx.controls;
     requires javafx.fxml;
-    requires lombok;
+    requires static lombok;
     requires jakarta.persistence;
     requires java.naming;
     requires mysql.connector.j;
