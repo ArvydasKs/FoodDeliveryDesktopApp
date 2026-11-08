@@ -1,5 +1,6 @@
 package com.example.courseprifs.validators;
 
+import com.example.courseprifs.dto.UserFormData;
 import com.example.courseprifs.model.UserType;
 
 public final class UserFormValidator {

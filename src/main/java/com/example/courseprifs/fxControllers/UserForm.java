@@ -2,7 +2,8 @@ package com.example.courseprifs.fxControllers;
 
 import com.example.courseprifs.HibernateControl.GenericHibernate;
 import com.example.courseprifs.model.*;
-import com.example.courseprifs.validators.UserFormData;
+import com.example.courseprifs.dto.UserFormData;
+import com.example.courseprifs.services.PasswordService;
 import com.example.courseprifs.validators.UserFormValidator;
 import jakarta.persistence.EntityManagerFactory;
 import javafx.event.ActionEvent;
@@ -11,7 +12,6 @@ import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import org.hibernate.tool.schema.Action;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.net.URL;
@@ -52,6 +52,8 @@ public class UserForm implements Initializable {
     private EntityManagerFactory entityManagerFactory;
 
     private GenericHibernate genericHibernate;
+
+    private final PasswordService passwordService = new PasswordService();
 
     private User currentUser;
     private User userToUpdate;
@@ -227,7 +229,7 @@ public class UserForm implements Initializable {
         String newPassword = pswField.getText();
 
         if (newPassword != null && !newPassword.isBlank()) {
-            String hashed = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+            String hashed = passwordService.hash(newPassword);
             userToUpdate.setPassword(hashed);
         }
 
