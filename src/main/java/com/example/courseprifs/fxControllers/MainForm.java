@@ -3,6 +3,7 @@ package com.example.courseprifs.fxControllers;
 import com.example.courseprifs.HelloApplication;
 import com.example.courseprifs.HibernateControl.CustomHibernate;
 import com.example.courseprifs.model.*;
+import com.example.courseprifs.services.PriceService;
 import jakarta.persistence.Basic;
 import jakarta.persistence.EntityManagerFactory;
 import javafx.collections.FXCollections;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 public class MainForm implements Initializable {
+    private static final String PRICE_CHANGE_HEADER = "Change price error";
+
     @FXML
     public ListView<User> userListField;
     @FXML
@@ -146,6 +149,7 @@ public class MainForm implements Initializable {
     private EntityManagerFactory entityManagerFactory;
     private CustomHibernate customHibernate;
     private User currentUser;
+    private final PriceService priceService = new PriceService();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -778,44 +782,66 @@ public class MainForm implements Initializable {
     }
 
     public void changePrices() {
+        Restaurant selectedRestaurant = getSelectedRestaurant();
+        if (selectedRestaurant == null) return;
+
+        Double multiplier = parseMultiplier();
+        if (multiplier == null) return;
+
+        List<Cuisine> cuisines = getRestaurantCuisines(selectedRestaurant);
+        if (cuisines == null) return;
+
+        updateCuisinePrices(cuisines, multiplier);
+        finishPriceChange();
+    }
+
+    private Restaurant getSelectedRestaurant() {
         Restaurant selectedRestaurant = restaurantCuisineField.getSelectionModel().getSelectedItem();
         if (selectedRestaurant == null) {
-            FxUtils.generateAlert(Alert.AlertType.WARNING, "Error", "Change price error", "You must select the restaurant before changing prices.");
-            return;
+            showPriceChangeWarning("You must select the restaurant before changing prices.");
         }
+        return selectedRestaurant;
+    }
 
+    private List<Cuisine> getRestaurantCuisines(Restaurant restaurant) {
+        List<Cuisine> cuisines = customHibernate.getRestaurantCuisine(restaurant);
+        if (cuisines.isEmpty()) {
+            showPriceChangeWarning("This restaurant has no cuisines.");
+            return null;
+        }
+        return cuisines;
+    }
+
+    private Double parseMultiplier() {
         String multiplierText = multiplierField.getText().trim();
         if (multiplierText.isEmpty()) {
-            FxUtils.generateAlert(Alert.AlertType.WARNING, "Error", "Change price error", "Please enter a multiplier.");
-            return;
+            showPriceChangeWarning("Please enter a multiplier.");
+            return null;
         }
 
-        double multiplier;
         try {
-            multiplier = Double.parseDouble(multiplierText);
+            double multiplier = Double.parseDouble(multiplierText);
             if (multiplier <= 0) {
-                FxUtils.generateAlert(Alert.AlertType.WARNING, "Error", "Change price error", "Multiplier must be a positive number.");
-                return;
+                showPriceChangeWarning("Multiplier must be a positive number.");
+                return null;
             }
+            return multiplier;
         } catch (NumberFormatException e) {
-            FxUtils.generateAlert(Alert.AlertType.WARNING, "Error", "Change price error", "Please enter a valid multiplier.");
-            return;
+            showPriceChangeWarning("Please enter a valid multiplier.");
+            return null;
         }
+    }
 
-        List<Cuisine> cuisines = customHibernate.getRestaurantCuisine(selectedRestaurant);
-        if (cuisines.isEmpty()) {
-            FxUtils.generateAlert(Alert.AlertType.WARNING,
-                    "Error", "Change price error", "This restaurant has no cuisines.");
-            return;
-        }
+    private void updateCuisinePrices(List<Cuisine> cuisines, double multiplier) {
+        priceService.applyMultiplier(cuisines, multiplier);
+        cuisines.forEach(customHibernate::update);
+    }
 
-        for (Cuisine cuisine : cuisines) {
-            double oldPrice = cuisine.getPrice();
-            double newPrice = oldPrice * multiplier;
-            cuisine.setPrice(newPrice);
-            customHibernate.update(cuisine);
-        }
+    private void showPriceChangeWarning(String message) {
+        FxUtils.generateAlert(Alert.AlertType.WARNING, "Error", PRICE_CHANGE_HEADER, message);
+    }
 
+    private void finishPriceChange() {
         loadRestaurantMenu();
         multiplierField.clear();
     }
