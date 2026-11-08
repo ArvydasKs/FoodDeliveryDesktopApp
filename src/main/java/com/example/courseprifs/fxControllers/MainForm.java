@@ -26,11 +26,24 @@ import org.hibernate.query.Order;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 public class MainForm implements Initializable {
     private static final String PRICE_CHANGE_HEADER = "Change price error";
+    private static final Set<OrderStatus> CLIENT_LOCKED_STATUSES = EnumSet.of(
+            OrderStatus.SEEN_BY_STAFF,
+            OrderStatus.READY_FOR_PICKUP,
+            OrderStatus.IN_DELIVERY,
+            OrderStatus.COMPLETED
+    );
+    private static final Set<OrderStatus> ORDER_DETAILS_LOCKED_STATUSES = EnumSet.of(
+            OrderStatus.READY_FOR_PICKUP,
+            OrderStatus.IN_DELIVERY,
+            OrderStatus.COMPLETED
+    );
 
     @FXML
     public ListView<User> userListField;
@@ -587,26 +600,11 @@ public class MainForm implements Initializable {
 
     private void disableFoodOrderFields() {
         OrderStatus status = orderStatusField.getSelectionModel().getSelectedItem();
-
-        // nuo SEEN_BY_STAFF negalima keisti kliento
-        boolean lockClient = (
-                        status == OrderStatus.SEEN_BY_STAFF ||
-                        status == OrderStatus.READY_FOR_PICKUP ||
-                                status == OrderStatus.IN_DELIVERY ||
-                        status == OrderStatus.COMPLETED
-                );
-
-        // nuo IN_DELIVERY negalima keisti restorano, kainos ir patiekalu
-        boolean fullLock = (
-                        status == OrderStatus.READY_FOR_PICKUP ||
-                        status == OrderStatus.IN_DELIVERY ||
-                        status == OrderStatus.COMPLETED
-                );
-
-        clientList.setDisable(lockClient);
-        restaurantField.setDisable(fullLock);
-        priceField.setDisable(fullLock);
-        foodList.setDisable(fullLock);
+        clientList.setDisable(CLIENT_LOCKED_STATUSES.contains(status));
+        boolean detailsLocked = ORDER_DETAILS_LOCKED_STATUSES.contains(status);
+        restaurantField.setDisable(detailsLocked);
+        priceField.setDisable(detailsLocked);
+        foodList.setDisable(detailsLocked);
     }
 
     public void filterOrders() {
