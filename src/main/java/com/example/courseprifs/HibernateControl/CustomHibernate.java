@@ -1,6 +1,7 @@
 package com.example.courseprifs.HibernateControl;
 
 import com.example.courseprifs.model.*;
+import com.example.courseprifs.services.PasswordService;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Query;
 import jakarta.persistence.criteria.*;
@@ -10,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CustomHibernate extends GenericHibernate {
+    private final PasswordService passwordService = new PasswordService();
+
     public CustomHibernate(EntityManagerFactory entityManagerFactory) {
         super(entityManagerFactory);
     }
@@ -27,7 +30,7 @@ public class CustomHibernate extends GenericHibernate {
 
             user = (User) q.getSingleResult();
 
-            if (!BCrypt.checkpw(password, user.getPassword())) {
+            if (!passwordService.matches(password, user.getPassword())) {
                 return null;
             }
         }

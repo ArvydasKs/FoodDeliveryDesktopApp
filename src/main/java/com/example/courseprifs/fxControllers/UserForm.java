@@ -2,7 +2,9 @@ package com.example.courseprifs.fxControllers;
 
 import com.example.courseprifs.HibernateControl.GenericHibernate;
 import com.example.courseprifs.model.*;
-import com.example.courseprifs.validators.UserFormData;
+import com.example.courseprifs.dto.UserFormData;
+import com.example.courseprifs.services.PasswordService;
+import com.example.courseprifs.services.UserService;
 import com.example.courseprifs.validators.UserFormValidator;
 import jakarta.persistence.EntityManagerFactory;
 import javafx.event.ActionEvent;
@@ -11,7 +13,6 @@ import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import org.hibernate.tool.schema.Action;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.net.URL;
@@ -53,6 +54,9 @@ public class UserForm implements Initializable {
 
     private GenericHibernate genericHibernate;
 
+    private final PasswordService passwordService = new PasswordService();
+    private UserService userService;
+
     private User currentUser;
     private User userToUpdate;
     private boolean register;
@@ -60,6 +64,7 @@ public class UserForm implements Initializable {
     public void setData(EntityManagerFactory entityManagerFactory, User user, User userToUpdate, boolean register) {
         this.entityManagerFactory = entityManagerFactory;
         this.genericHibernate = new GenericHibernate(entityManagerFactory);
+        this.userService = new UserService(genericHibernate, passwordService);
         this.currentUser = user;
         this.userToUpdate = userToUpdate;
         this.register = register;
@@ -168,52 +173,20 @@ public class UserForm implements Initializable {
     public void createUser(ActionEvent actionEvent) {
         if (!validateForm()) return;
 
-        String hashedPassword = BCrypt.hashpw(pswField.getText(), BCrypt.gensalt());
+        userService.createUser(readFormData());
+        if (isOpenedFromMainWindow()) notifySavedAndClose(actionEvent);
+    }
 
-        if (userRadio.isSelected()) {
-            User user = new User(usernameField.getText(),
-                    hashedPassword,
-                    nameField.getText(),
-                    surnameField.getText(),
-                    phoneNumField.getText());
-            genericHibernate.create(user);
-        } else if (restaurantRadio.isSelected()) {
-            Restaurant restaurant = new Restaurant(usernameField.getText(),
-                    hashedPassword,
-                    nameField.getText(),
-                    surnameField.getText(),
-                    phoneNumField.getText(),
-                    addressField.getText());
-            genericHibernate.create(restaurant);
-        } else if (clientRadio.isSelected()) {
-            BasicUser basicUser = new BasicUser(usernameField.getText(),
-                    hashedPassword,
-                    nameField.getText(),
-                    surnameField.getText(),
-                    phoneNumField.getText(),
-                    addressField.getText());
-            genericHibernate.create(basicUser);
-        } else if (driverRadio.isSelected()) {
-            Driver driver = new Driver(usernameField.getText(),
-                    hashedPassword,
-                    nameField.getText(),
-                    surnameField.getText(),
-                    phoneNumField.getText(),
-                    addressField.getText(),
-                    licenceField.getText(),
-                    bDateField.getValue(),
-                    vehicleTypeField.getValue());
-            genericHibernate.create(driver);
-        }
+    private boolean isOpenedFromMainWindow() {
+        return currentUser != null;
+    }
 
-        if (currentUser != null)
-        {
-            if (onSaveCallback != null) {
-                onSaveCallback.run();
-            }
-            Stage stage = (Stage) ((Node) actionEvent.getSource()).getScene().getWindow();
-            stage.close();
+    private void notifySavedAndClose(ActionEvent actionEvent) {
+        if (onSaveCallback != null) {
+            onSaveCallback.run();
         }
+        Stage stage = (Stage) ((Node) actionEvent.getSource()).getScene().getWindow();
+        stage.close();
     }
 
     public void updateUser(ActionEvent actionEvent) {
@@ -227,7 +200,7 @@ public class UserForm implements Initializable {
         String newPassword = pswField.getText();
 
         if (newPassword != null && !newPassword.isBlank()) {
-            String hashed = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+            String hashed = passwordService.hash(newPassword);
             userToUpdate.setPassword(hashed);
         }
 
@@ -246,11 +219,7 @@ public class UserForm implements Initializable {
 
         genericHibernate.update(userToUpdate);
 
-        if (onSaveCallback != null) {
-            onSaveCallback.run();
-        }
-        Stage stage = (Stage) ((Node) actionEvent.getSource()).getScene().getWindow();
-        stage.close();
+        notifySavedAndClose(actionEvent);
     }
 
     public void disableFields() {
