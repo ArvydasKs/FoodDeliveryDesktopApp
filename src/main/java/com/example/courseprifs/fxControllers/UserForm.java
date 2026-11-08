@@ -2,6 +2,8 @@ package com.example.courseprifs.fxControllers;
 
 import com.example.courseprifs.HibernateControl.GenericHibernate;
 import com.example.courseprifs.model.*;
+import com.example.courseprifs.validators.UserFormData;
+import com.example.courseprifs.validators.UserFormValidator;
 import jakarta.persistence.EntityManagerFactory;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -71,42 +73,47 @@ public class UserForm implements Initializable {
     }
 
     private boolean validateForm() {
-        StringBuilder errors = new StringBuilder();
-
-        if (usernameField.getText().isBlank()) errors.append("Username cannot be empty.\n");
-        if (userToUpdate == null) {
-            if (pswField.getText().isBlank()) errors.append("Password cannot be empty.\n");
-        }
-        if (nameField.getText().isBlank()) errors.append("Name cannot be empty.\n");
-        if (surnameField.getText().isBlank()) errors.append("Surname cannot be empty.\n");
-        if (phoneNumField.getText().isBlank()) {
-            errors.append("Phone number cannot be empty.\n");
-        } else if (!phoneNumField.getText().matches("^[0-9]+$")) {
-            errors.append("Invalid phone number format.\n");
-        }
-
-        if ((restaurantRadio.isSelected() || clientRadio.isSelected() || driverRadio.isSelected()) && addressField.getText().isBlank()) {
-            errors.append("Address cannot be empty.\n");
-        }
-
-        if (driverRadio.isSelected()) {
-            if (licenceField.getText().isBlank()) errors.append("Driver's licence cannot be empty.\n");
-            if (bDateField.getValue() == null) errors.append("Birth date must be selected.\n");
-            if (vehicleTypeField.getValue() == null) errors.append("Vehicle type must be selected.\n");
-        }
-
-        if (!errors.isEmpty()) {
-            FxUtils.generateAlert(Alert.AlertType.ERROR, "Validation Error", "Please fix these issues: ", errors.toString());
+        String errors = UserFormValidator.validate(readFormData());
+        if (!errors.isEmpty()) { // patikrinti, ar nera klaidu
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Validation Error", "Please fix these issues: ", errors);
             return false;
         }
-
-        if (userToUpdate == null && genericHibernate.userExists(usernameField.getText().trim())) {
-            FxUtils.generateAlert(Alert.AlertType.ERROR, "Validation Error", "Duplicate username", "That username is already taken.");
-            return false;
-        }
-
-        return true;
+        return isUsernameAvailable();
     }
+
+    private UserFormData readFormData() { // nuskaityti formos laukus
+        return new UserFormData(
+                usernameField.getText(),
+                pswField.getText(),
+                nameField.getText(),
+                surnameField.getText(),
+                phoneNumField.getText(),
+                addressField.getText(),
+                licenceField.getText(),
+                bDateField.getValue(),
+                vehicleTypeField.getValue(),
+                selectedRole(),
+                isCreateMode()
+        );
+    }
+
+    private boolean isCreateMode() {
+        return userToUpdate == null;
+    }
+
+    private UserType selectedRole() {
+        if (restaurantRadio.isSelected()) return UserType.Restaurant;
+        if (clientRadio.isSelected()) return UserType.Client;
+        if (driverRadio.isSelected()) return UserType.Driver;
+        return UserType.User;
+    }
+
+    private boolean isUsernameAvailable() { // patikrinti, ar nera tokio username
+        if (!isCreateMode() || !genericHibernate.userExists(usernameField.getText().trim())) return true;
+        FxUtils.generateAlert(Alert.AlertType.ERROR, "Validation Error", "Duplicate username", "That username is already taken.");
+        return false;
+    }
+
 
     private void fillFields() {
         if (userToUpdate != null) {
