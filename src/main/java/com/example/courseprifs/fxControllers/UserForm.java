@@ -247,46 +247,17 @@ public class UserForm implements Initializable {
     }
 
     public void disableFields() {
-        if (userRadio.isSelected()) {
-            addressField.setDisable(true);
-            addressField.setVisible(false);
-            licenceField.setDisable(true);
-            licenceField.setVisible(false);
-            bDateField.setDisable(true);
-            bDateField.setVisible(false);
-            vehicleTypeField.setDisable(true);
-            vehicleTypeField.setVisible(false);
-        }
-        else if (clientRadio.isSelected()) {
-            addressField.setDisable(false);
-            addressField.setVisible(true);
-            licenceField.setDisable(true);
-            licenceField.setVisible(false);
-            bDateField.setDisable(true);
-            bDateField.setVisible(false);
-            vehicleTypeField.setDisable(true);
-            vehicleTypeField.setVisible(false);
-        }
-        else if (driverRadio.isSelected()) {
-            addressField.setDisable(false);
-            addressField.setVisible(true);
-            licenceField.setDisable(false);
-            licenceField.setVisible(true);
-            bDateField.setDisable(false);
-            bDateField.setVisible(true);
-            vehicleTypeField.setDisable(false);
-            vehicleTypeField.setVisible(true);
-        }
-        else {
-            addressField.setDisable(false);
-            addressField.setVisible(true);
-            licenceField.setDisable(true);
-            licenceField.setVisible(false);
-            bDateField.setDisable(true);
-            bDateField.setVisible(false);
-            vehicleTypeField.setDisable(true);
-            vehicleTypeField.setVisible(false);
-        }
+        boolean showAddress = !userRadio.isSelected();
+        boolean showDriverDetails = driverRadio.isSelected();
+
+        setFieldActive(addressField, showAddress);
+        setFieldActive(licenceField, showDriverDetails);
+        setFieldActive(bDateField, showDriverDetails);
+        setFieldActive(vehicleTypeField, showDriverDetails);
+    }
+    private void setFieldActive(Node field, boolean active) {
+        field.setDisable(!active);
+        field.setVisible(active);
     }
 
     @Override
