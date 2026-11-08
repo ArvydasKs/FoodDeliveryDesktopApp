@@ -211,86 +211,99 @@ public class MainForm implements Initializable {
 
     public void reloadTableData() {
         if (userTab.isSelected()) {
-            data.clear();
-            //userTable.getItems().clear();
-
-            List<User> users = customHibernate.getAllRecords(User.class);
-            for (User u : users) {
-                UserTableParameters userTableParameters = new UserTableParameters();
-                userTableParameters.setId(u.getId());
-                userTableParameters.setUserType(u.getClass().getSimpleName());
-                userTableParameters.setLogin(u.getLogin());
-                userTableParameters.setPassword(u.getPassword());
-                userTableParameters.setName(u.getName());
-                userTableParameters.setSurname(u.getSurname());
-                userTableParameters.setPhoneNumber(u.getPhoneNumber());
-
-                if (u instanceof BasicUser) {
-                    userTableParameters.setAddress(((BasicUser) u).getAddress());
-                }
-                if (u instanceof Restaurant) {
-                    userTableParameters.setAddress(((Restaurant) u).getAddress());
-                }
-                if (u instanceof Driver) {
-                    userTableParameters.setAddress(((Driver) u).getAddress());
-                }
-                data.add(userTableParameters);
-            }
-            // userTable.getItems().addAll(data);
-        }
-        else if (orderTab.isSelected()) {
-            clearAllOrderFields();
-            List<FoodOrder> foodOrders = getFoodOrders();
-            orderList.getItems().addAll(foodOrders);
-            List<BasicUser> onlyBasicUsers = customHibernate.getAllRecords(BasicUser.class).stream()
-                                             .filter(u -> u.getClass().equals(BasicUser.class))
-                                                     .toList();
-            clientList.getItems().addAll(onlyBasicUsers);
-            orderStatusField.getItems().addAll(OrderStatus.values());
-
-            if (currentUser instanceof Restaurant restaurant) {
-                restaurantField.getItems().clear();
-                restaurantField.getItems().add(restaurant);
-            } else {
-                restaurantField.getItems().addAll(customHibernate.getAllRecords(Restaurant.class));
-            }
-
-            filterStatus.getItems().addAll(OrderStatus.values());
-            filterClients.getItems().addAll(onlyBasicUsers);
-
-            if (currentUser instanceof Restaurant) {
-                filterRestaurants.setDisable(true);
-                filterRestaurants.setVisible(false);
-            } else {
-                List<Restaurant> onlyRestaurants = customHibernate.getAllRecords(Restaurant.class).stream()
-                        .filter(u -> u.getClass().equals(Restaurant.class))
-                        .toList();
-
-                filterRestaurants.getItems().addAll(onlyRestaurants);
-            }
-        }
-        else if (foodTab.isSelected()) {
-            clearAllCuisineFields();
-            allergenCuisineField.getItems().addAll(Allergen.values());
-            if (currentUser instanceof Restaurant restaurant) {
-                restaurantCuisineField.getItems().clear();
-                restaurantCuisineField.getItems().add(restaurant);
-                restaurantCuisineField.getSelectionModel().select(restaurant);
-                loadRestaurantMenu();
-            } else {
-                restaurantCuisineField.getItems().addAll(customHibernate.getAllRecords(Restaurant.class));
-            }
-        }
-        else if (altUserTab.isSelected()) {
+            reloadUserTab();
+        } else if (orderTab.isSelected()) {
+            reloadOrderTab();
+        } else if (foodTab.isSelected()) {
+            reloadFoodTab();
+        } else if (altUserTab.isSelected()) {
             fillAltUserList();
-        }
-        else if (chatTab.isSelected()) {
+        } else if (chatTab.isSelected()) {
             clearChatFields();
             updateChatList();
-        }
-        else if (reviewTab.isSelected()) {
+        } else if (reviewTab.isSelected()) {
             clearReviewFields();
             updateReviewUserList();
+        }
+    }
+
+    private void reloadUserTab() {
+        data.clear();
+        List<User> users = customHibernate.getAllRecords(User.class);
+        for (User u : users) {
+            data.add(mapToUserTableParameters(u));
+        }
+    }
+
+    private UserTableParameters mapToUserTableParameters(User u) {
+        UserTableParameters params = new UserTableParameters();
+        params.setId(u.getId());
+        params.setUserType(u.getClass().getSimpleName());
+        params.setLogin(u.getLogin());
+        params.setPassword(u.getPassword());
+        params.setName(u.getName());
+        params.setSurname(u.getSurname());
+        params.setPhoneNumber(u.getPhoneNumber());
+        params.setAddress(extractUserAddress(u));
+        return params;
+    }
+
+    private String extractUserAddress(User u) {
+        if (u instanceof BasicUser basicUser) {
+            return basicUser.getAddress();
+        }
+        if (u instanceof Restaurant restaurant) {
+            return restaurant.getAddress();
+        }
+        if (u instanceof Driver driver) {
+            return driver.getAddress();
+        }
+        return null;
+    }
+
+    private void reloadOrderTab() {
+        clearAllOrderFields();
+        orderList.getItems().addAll(getFoodOrders());
+
+        List<BasicUser> onlyBasicUsers = getExactClassRecords(BasicUser.class);
+        clientList.getItems().addAll(onlyBasicUsers);
+        filterClients.getItems().addAll(onlyBasicUsers);
+
+        orderStatusField.getItems().addAll(OrderStatus.values());
+        filterStatus.getItems().addAll(OrderStatus.values());
+
+        configureOrderRestaurantFields();
+    }
+
+    private void configureOrderRestaurantFields() {
+        if (currentUser instanceof Restaurant restaurant) {
+            restaurantField.getItems().clear();
+            restaurantField.getItems().add(restaurant);
+            filterRestaurants.setDisable(true);
+            filterRestaurants.setVisible(false);
+        } else {
+            restaurantField.getItems().addAll(customHibernate.getAllRecords(Restaurant.class));
+            filterRestaurants.getItems().addAll(getExactClassRecords(Restaurant.class));
+        }
+    }
+
+    private <T> List<T> getExactClassRecords(Class<T> clazz) {
+        return customHibernate.getAllRecords(clazz).stream()
+                .filter(item -> item.getClass().equals(clazz))
+                .toList();
+    }
+
+    private void reloadFoodTab() {
+        clearAllCuisineFields();
+        allergenCuisineField.getItems().addAll(Allergen.values());
+
+        if (currentUser instanceof Restaurant restaurant) {
+            restaurantCuisineField.getItems().clear();
+            restaurantCuisineField.getItems().add(restaurant);
+            restaurantCuisineField.getSelectionModel().select(restaurant);
+            loadRestaurantMenu();
+        } else {
+            restaurantCuisineField.getItems().addAll(customHibernate.getAllRecords(Restaurant.class));
         }
     }
 
